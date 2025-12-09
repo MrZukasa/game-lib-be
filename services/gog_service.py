@@ -1,6 +1,6 @@
 import requests
 from typing import List
-from models.models import SteamGame
+from models.models import GogGame
 import os
 from dotenv import load_dotenv
 
@@ -8,7 +8,6 @@ load_dotenv()
 
 GOG_CLIENT_ID = os.getenv("GOG_CLIENT_ID")
 GOG_CLIENT_SECRET = os.getenv("GOG_CLIENT_SECRET")
-# GOG_REDIRECT_URI = os.getenv("GOG_REDIRECT_URI")
 GOG_API_BASE = os.getenv("GOG_API_BASE")
 GOG_CODE = os.getenv("GOG_CODE")
 GOG_REFRESH_TOKEN = os.getenv("GOG_REFRESH_TOKEN")
@@ -19,10 +18,8 @@ def refresh_gog_token() -> dict:
     params = {
         "client_id": GOG_CLIENT_ID,
         "client_secret": GOG_CLIENT_SECRET,
-        # "grant_type": "authorization_code",
         "grant_type": "refresh_token",
         "code": GOG_CODE,
-        # "redirect_uri": GOG_REDIRECT_URI,
         "refresh_token": GOG_REFRESH_TOKEN,
     }
     res = requests.get(url, params=params)
@@ -30,7 +27,7 @@ def refresh_gog_token() -> dict:
     return res.json().get("access_token", [])
 
 
-def fetch_gog_games(access_token: str) -> List[SteamGame]:
+def fetch_gog_games(access_token: str) -> List[GogGame]:
     headers = {"Authorization": f"Bearer {access_token}"}
     res = requests.get(
         "https://www.gog.com/account/getFilteredProducts?mediaType=1&sortBy=title",
@@ -42,7 +39,7 @@ def fetch_gog_games(access_token: str) -> List[SteamGame]:
     if not owned_products:
         return []
 
-    games: List[SteamGame] = []
+    games: List[GogGame] = []
 
     for p in owned_products:
         img = p.get("image", "")
@@ -51,7 +48,7 @@ def fetch_gog_games(access_token: str) -> List[SteamGame]:
         img += ".jpg"
 
         games.append(
-            SteamGame(
+            GogGame(
                 id=str(p.get("id")),
                 title=p.get("title", "Unknown"),
                 platform="GOG",

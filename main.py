@@ -3,9 +3,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security.api_key import APIKeyHeader
 from typing import List
 
-from models.models import SteamGame
+from models.models import SteamGame, GogGame, TitleResponse
 from services.gog_service import refresh_gog_token, fetch_gog_games
 from services.steam_service import fetch_steam_games
+from services.xbox_service import refresh_xbox_token, fetch_xbox_games
 
 app = FastAPI(title="Game Library API")
 origins = ["http://localhost:5173"]
@@ -40,8 +41,6 @@ def get_steam_games():
     tags=["GOG"],
     summary="Richiesta Authorization: Bearer <token>",
 )
-# def gog_token(req: GogCodeRequest):
-#  token_data = exchange_gog_code_for_token(req.code)
 def gog_token():
     token_data = refresh_gog_token()
     return token_data
@@ -50,7 +49,7 @@ def gog_token():
 api_key_header = APIKeyHeader(name="Authorization")
 
 
-def get_api_key(api_key_header: str = Depends(api_key_header)) -> str:
+def get_gog_api_key(api_key_header: str = Depends(api_key_header)) -> str:
     if not api_key_header:
         raise HTTPException(status_code=401, detail="Missing Authorization header")
     if not api_key_header.startswith("Bearer "):
@@ -60,9 +59,39 @@ def get_api_key(api_key_header: str = Depends(api_key_header)) -> str:
 
 @app.get(
     "/gog/games",
-    response_model=List[SteamGame],
+    response_model=List[GogGame],
     tags=["GOG"],
     summary="Restituisce la lista dei giochi GOG dell'utente.",
 )
-def get_gog_games(token: str = Depends(get_api_key)):
+def get_gog_games(token: str = Depends(get_gog_api_key)):
     return fetch_gog_games(token)
+
+
+# -----------------------------
+# Endpoint Xbox
+# -----------------------------
+@app.post(
+    "/xbox/token", tags=["Xbox"], summary="Richiesta Authorization: Bearer <token>"
+)
+def xbox_token():
+    token_data = refresh_xbox_token()
+    return token_data
+
+
+api_key_header = APIKeyHeader(name="Authorization")
+
+
+def get_xbox_api_key(api_key_header: str = Depends(api_key_header)) -> str:
+    if not api_key_header:
+        raise HTTPException(status_code=401, detail="Missing Authorization header")
+    return api_key_header.replace("Bearer ", "")
+
+
+@app.get(
+    "/xbox/games",
+    response_model=TitleResponse,
+    tags=["Xbox"],
+    summary="Restituisce la lista dei giochi Xbox dell'utente.",
+)
+def get_xbox_games(token: str = Depends(get_xbox_api_key)):
+    return fetch_xbox_games(token)
