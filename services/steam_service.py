@@ -2,7 +2,7 @@ from typing import List
 import os
 from dotenv import load_dotenv
 import requests
-from models import SteamGame
+from models.steam_models import SteamGame
 
 load_dotenv()
 

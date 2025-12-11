@@ -1,5 +1,5 @@
 import requests
-from models.models import (
+from models.amazon_models import (
     AMZTokenRequest,
     AMZTokenResponse,
     AMZGameRequest,

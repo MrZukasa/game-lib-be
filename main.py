@@ -4,11 +4,19 @@ from fastapi import Depends, FastAPI, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security.api_key import APIKeyHeader
 
-from models.models import GogGame, SteamGame, TitleResponse, AMZGameResponse
+from models.gog_models import GogGame
+from models.steam_models import SteamGame
+from models.xbox_models import TitleResponse
+from models.amazon_models import AMZGameResponse
 from services.amazon_services import refresh_amazon_token, fetch_amazon_games
 from services.gog_service import fetch_gog_games, refresh_gog_token
 from services.steam_service import fetch_steam_games
-from services.xbox_service import fetch_xbox_games, refresh_xbox_token
+from services.xbox_service import (
+    fetch_xbox_games,
+    xsts_token,
+    refresh_token,
+    auth_token,
+)
 
 app = FastAPI(title="Game Library API")
 origins = ["http://localhost:5173"]
@@ -22,13 +30,14 @@ app.add_middleware(
         "authorization",
         "Content-Type",
         "Accept",
+        "nextToken",
     ],
     expose_headers=["Authorization"],
 )
 
 
 # -----------------------------
-# Endpoint Steam
+# PERF: Endpoint Steam
 # -----------------------------
 @app.get(
     "/steam/games",
@@ -41,7 +50,7 @@ def get_steam_games():
 
 
 # -----------------------------
-# Endpoint GOG
+# PERF: Endpoint GOG
 # -----------------------------
 @app.post(
     "/gog/token",
@@ -75,13 +84,15 @@ def get_gog_games(token: str = Depends(get_gog_api_key)):
 
 
 # -----------------------------
-# Endpoint Xbox
+# PERF: Endpoint Xbox
 # -----------------------------
 @app.post(
     "/xbox/token", tags=["Xbox"], summary="Richiesta Authorization: Bearer <token>"
 )
 def xbox_token():
-    token_data = refresh_xbox_token()
+    refresh = refresh_token()
+    auth = auth_token(refresh.access_token)
+    token_data = xsts_token(auth.Token)
     return token_data
 
 
@@ -100,12 +111,12 @@ def get_xbox_api_key(api_key_header: str = Depends(api_key_header)) -> str:
     tags=["Xbox"],
     summary="Restituisce la lista dei giochi Xbox dell'utente.",
 )
-def get_xbox_games(token: str = Depends(get_xbox_api_key)):
-    return fetch_xbox_games(token)
+def get_xbox_games(token: str = Depends(get_xbox_api_key), uhs: str = ""):
+    return fetch_xbox_games(token, uhs)
 
 
 # -----------------------------
-# Endpoint Amazon
+# PERF: Endpoint Amazon
 # -----------------------------
 @app.post(
     "/amazon/token", tags=["Amazon"], summary="Richiesta Authorization: Bearer <token>"

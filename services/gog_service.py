@@ -1,6 +1,6 @@
 import requests
 from typing import List
-from models.models import GogGame
+from models.gog_models import GogGame
 import os
 from dotenv import load_dotenv
 
