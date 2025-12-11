@@ -1,7 +1,8 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, List, Any, Dict
 
 
+# PERF: STEAM MODELS
 class SteamGame(BaseModel):
     id: str
     title: str
@@ -9,6 +10,7 @@ class SteamGame(BaseModel):
     image: Optional[str]
 
 
+# PERF: GOG MODELS
 class GogGame(BaseModel):
     id: str
     title: str
@@ -16,6 +18,7 @@ class GogGame(BaseModel):
     image: Optional[str]
 
 
+# PERF: XBOX MODELS
 class XSTSAuthRequestProperties(BaseModel):
     SandboxId: str
     UserTokens: List[str]
@@ -99,3 +102,101 @@ class StatlistscollectionItem(BaseModel):
 class TitleDetailResponse(BaseModel):
     groups: List
     statlistscollection: List[StatlistscollectionItem]
+
+
+# PERF: AMAZON MODELS
+class AMZTokenRequest(BaseModel):
+    source_token_type: str
+    requested_token_type: str
+    source_token: str
+    app_name: str
+    app_version: str
+
+
+class AgeClassification(BaseModel):
+    age_classification: str
+
+
+class Response(BaseModel):
+    token_expires_in: str
+    token_type: str
+    token: str
+
+
+class AMZTokenResponse(BaseModel):
+    access_token: str
+    age_classification: AgeClassification
+    response: Response
+    token_type: str
+    expires_in: int
+    request_id: str
+
+
+class AMZGameRequest(BaseModel):
+    clientId: str
+    syncPoint: Any
+    nextToken: Any
+    maxResults: int
+    productIdFilter: Any
+    keyId: str
+    hardwareHash: str
+    disableStateFilter: bool
+    Operation: str
+
+
+class Websites(BaseModel):
+    OFFICIAL: str
+
+
+class Details(BaseModel):
+    backgroundUrl1: str
+    backgroundUrl2: str
+    developer: str
+    esrbRating: str
+    gameModes: List[str]
+    genres: List[str]
+    keywords: List[str]
+    legacyProductIds: List[str] | None = None
+    logoUrl: str
+    otherDevelopers: List
+    pegiRating: str
+    pgCrownImageUrl: str
+    publisher: str
+    releaseDate: str
+    screenshots: List
+    shortDescription: str | None = None
+    uskRating: str
+    websites: Websites
+
+
+class ProductDetail(BaseModel):
+    details: Details
+    iconUrl: str
+
+
+class Product(BaseModel):
+    asinVersion: int
+    description: str
+    domainId: str
+    id: str
+    productDetail: ProductDetail
+    productLine: str
+    sku: str
+    title: str
+    vendorId: str
+
+
+class Entitlement(BaseModel):
+    type_: str = Field(alias="__type")
+    channelId: str
+    entitlementDateFromEpoch: str
+    id: str
+    lastModifiedDate: float
+    product: Product
+    signature: str
+    state: str
+
+
+class AMZGameResponse(BaseModel):
+    entitlements: List[Entitlement]
+    nextToken: str

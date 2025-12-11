@@ -1,12 +1,14 @@
-from fastapi import HTTPException, FastAPI, Depends
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security.api_key import APIKeyHeader
 from typing import List
 
-from models.models import SteamGame, GogGame, TitleResponse
-from services.gog_service import refresh_gog_token, fetch_gog_games
+from fastapi import Depends, FastAPI, HTTPException, Header
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security.api_key import APIKeyHeader
+
+from models.models import GogGame, SteamGame, TitleResponse, AMZGameResponse
+from services.amazon_services import refresh_amazon_token, fetch_amazon_games
+from services.gog_service import fetch_gog_games, refresh_gog_token
 from services.steam_service import fetch_steam_games
-from services.xbox_service import refresh_xbox_token, fetch_xbox_games
+from services.xbox_service import fetch_xbox_games, refresh_xbox_token
 
 app = FastAPI(title="Game Library API")
 origins = ["http://localhost:5173"]
@@ -15,7 +17,12 @@ app.add_middleware(
     allow_origins=["http://localhost:5173"],
     allow_credentials=True,
     allow_methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["Authorization", "authorization", "Content-Type", "Accept"],
+    allow_headers=[
+        "Authorization",
+        "authorization",
+        "Content-Type",
+        "Accept",
+    ],
     expose_headers=["Authorization"],
 )
 
@@ -95,3 +102,42 @@ def get_xbox_api_key(api_key_header: str = Depends(api_key_header)) -> str:
 )
 def get_xbox_games(token: str = Depends(get_xbox_api_key)):
     return fetch_xbox_games(token)
+
+
+# -----------------------------
+# Endpoint Amazon
+# -----------------------------
+@app.post(
+    "/amazon/token", tags=["Amazon"], summary="Richiesta Authorization: Bearer <token>"
+)
+def amazon_token():
+    token_data = refresh_amazon_token()
+    return token_data
+
+
+api_key_header = APIKeyHeader(name="Authorization")
+
+
+def get_amazon_api_key(api_key_header: str = Depends(api_key_header)) -> str:
+    if not api_key_header:
+        raise HTTPException(status_code=401, detail="Missing Authorization header")
+    return api_key_header.replace("Bearer ", "")
+
+
+def get_amazon_next_token(
+    next_token: str | None = Header(None, alias="nextToken"),
+) -> str | None:
+    return next_token
+
+
+@app.get(
+    "/amazon/games",
+    response_model=AMZGameResponse,
+    tags=["Amazon"],
+    summary="Restituisce la lista dei giochi Amazon dell'utente.",
+)
+def get_amazon_games(
+    token: str = Depends(get_amazon_api_key),
+    next_token: str = Depends(get_amazon_next_token),
+):
+    return fetch_amazon_games(token, next_token)
