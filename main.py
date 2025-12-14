@@ -4,6 +4,7 @@ from fastapi import Depends, FastAPI, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security.api_key import APIKeyHeader
 
+from models.epic_models import TokenResponse
 from models.gog_models import GogGame
 from models.steam_models import SteamGame
 from models.xbox_models import TitleResponse
@@ -16,6 +17,10 @@ from services.xbox_service import (
     xsts_token,
     refresh_token,
     auth_token,
+)
+from services.epic_services import (
+    auth_code,
+    fetch_epic_games,
 )
 
 app = FastAPI(title="Game Library API")
@@ -31,6 +36,7 @@ app.add_middleware(
         "Content-Type",
         "Accept",
         "nextToken",
+        "nextCursor",
     ],
     expose_headers=["Authorization"],
 )
@@ -152,3 +158,44 @@ def get_amazon_games(
     next_token: str = Depends(get_amazon_next_token),
 ):
     return fetch_amazon_games(token, next_token)
+
+
+# -----------------------------
+# PERF: Endpoint Epic
+# -----------------------------
+@app.post(
+    "/epic/token",
+    response_model=TokenResponse,
+    tags=["Epic"],
+    summary="Richiesta Authorization: Bearer <token>",
+)
+def epic_token():
+    token_data = auth_code()
+    return token_data
+
+
+api_key_header = APIKeyHeader(name="Authorization")
+
+
+def get_epic_api_key(api_key_header: str = Depends(api_key_header)) -> str:
+    if not api_key_header:
+        raise HTTPException(status_code=401, detail="Missing Authorization header")
+    return api_key_header.replace("Bearer ", "")
+
+
+def get_epic_next_cursor(
+    next_cursor: str | None = Header(None, alias="nextCursor"),
+) -> str | None:
+    return next_cursor
+
+
+@app.get(
+    "/epic/games",
+    tags=["Epic"],
+    summary="Restituisce la lista dei giochi Epic dell'utente.",
+)
+def get_epic_games(
+    token: str = Depends(get_epic_api_key),
+    next_cursor: str = Depends(get_epic_next_cursor),
+):
+    return fetch_epic_games(token, next_cursor)
